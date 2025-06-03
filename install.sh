@@ -1,8 +1,12 @@
-#!/usr/bin/env bash
+diff --git a//dev/null b/install.sh
+index 0000000000000000000000000000000000000000..f208d282d5facd8fab577fdc363275638dba764e 100755
+--- a//dev/null
++++ b/install.sh
+@@ -0,0 +1,6 @@
++#!/bin/sh
++# Install script for Jester PWA
++# No dependencies are required, but this file is provided for extensibility.
++# Run `sh install.sh` to install any future packages.
++
++echo "Nessuna dipendenza da installare."
 
-# Script di installazione per ambienti Codex senza accesso alla rete
-# Qui potresti installare dipendenze locali o eseguire build offline.
-# Per questo progetto non sono necessarie dipendenze aggiuntive,
-# ma lasciamo lo script per futura estendibilità.
-
-echo "Installazione completata: nessuna dipendenza aggiuntiva richiesta."
