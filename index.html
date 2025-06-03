@@ -99,16 +99,26 @@
       online: 'jester_utente_online',
       acquistiSuper: 'jester_utente_acquisti_supermercato',
       acquistiOnline: 'jester_utente_acquisti_online',
-      fav: 'jester_utente_preferiti',
-      ocr: 'jester_ocr_confirmed'
-    };
-
-    function loadArray(key){
-      return JSON.parse(localStorage.getItem(key)||'[]');
+    
+    // Safe wrapper per localStorage
+    const memoryFallback = {};
+    function loadArray(key) {
+      try {
+        return JSON.parse(localStorage.getItem(key) || '[]');
+      } catch (e) {
+        console.error('localStorage load error', e);
+        return memoryFallback[key] || [];
+      }
     }
-    function saveArray(key, arr){
-      localStorage.setItem(key, JSON.stringify(arr));
+    function saveArray(key, arr) {
+      try {
+        localStorage.setItem(key, JSON.stringify(arr));
+      } catch (e) {
+        console.error('localStorage save error', e);
+        memoryFallback[key] = arr;
+      }
     }
+}
 
     function renderLists(){
       const sList = document.getElementById('lista-supermercato');
