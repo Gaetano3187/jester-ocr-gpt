@@ -5,6 +5,7 @@ Jester è un assistente vocale per la gestione della spesa che funziona interame
 ## Funzionalità
 - Due liste separate: **Supermercato** e **Online**
 - Aggiunta e rimozione manuale o tramite comandi vocali (Web Speech API)
+- - Comandi vocali avviabili dal pulsante "🎤 Comandi Vocali" o dicendo **"Ciao Jester"**
 - Possibilità di marcare i prodotti acquistati
 - Esportazione delle liste in formato `.txt`
 - Analisi OCR degli scontrini attraverso l'endpoint `/api/ocr-gpt`
