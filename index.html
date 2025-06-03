@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jester OCR GPT</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 2rem;
+      background: #f9f9f9;
+      color: #333;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    button {
+      padding: 0.6rem 1.2rem;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+    #output {
+      margin-top: 1rem;
+      background: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>📷 Jester – OCR con GPT</h1>
+  <p>Carica uno scontrino per estrarre i prodotti.</p>
+
+  <input type="file" accept="image/*" capture="environment" id="cameraInput" onchange="handlePhotoUpload(event)" style="display:none;">
+  <button onclick="document.getElementById('cameraInput').click()">Scatta Foto (Scontrino)</button>
+
+  <div id="output">📋 Prodotti rilevati appariranno qui...</div>
+
+  <script>
+    async function inviaFotoAVercel(base64Image) {
+      const res = await fetch('/api/ocr-gpt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ base64Image })
+      });
+
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error('Errore OCR via Vercel: ' + err);
+      }
+
+      const result = await res.json();
+      return result.choices?.[0]?.message?.content || '';
+    }
+
+    function handlePhotoUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function (e) {
+        const base64Image = e.target.result;
+        document.getElementById('output').innerText = '🤖 Analisi in corso...';
+
+        try {
+          const risposta = await inviaFotoAVercel(base64Image);
+          document.getElementById('output').innerText = `📋 Prodotti rilevati:\n${risposta}`;
+        } catch (err) {
+          document.getElementById('output').innerText = '❌ Errore: ' + err.message;
+        }
+      };
+
+      reader.readAsDataURL(file);
+    }
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/serviceWorker.js')
+        .then(reg => console.log("✅ Service Worker registrato:", reg.scope))
+        .catch(err => console.error("❌ Registrazione SW fallita:", err));
+    }
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/serviceWorker.js')
+        .then(reg => console.log('✅ Service Worker registrato:', reg.scope))
+        .catch(err => console.error('❌ Errore SW:', err));
+    }
+  </script>
+</body>
+</html>
