@@ -9,6 +9,7 @@ Jester è un assistente vocale per la gestione della spesa che funziona interame
 - Possibilità di marcare i prodotti acquistati
 - Esportazione delle liste in formato `.txt`
 - Analisi OCR degli scontrini attraverso l'endpoint `/api/ocr-gpt`
+- - Comprensione dei comandi vocali con ChatGPT via `/api/chat-gpt`
 - Gestione dei preferiti
 - Statistiche di completamento con barra di avanzamento colorata
 - Funzionamento offline tramite Service Worker e installazione PWA
@@ -29,6 +30,7 @@ manifest.json       # Configurazione PWA
 serviceWorker.js    # Cache offline e notifiche
 icon-192.png        # Icona app
 favicon.ico         # Icona tab browser
+api/chat-gpt.js      # Endpoint ChatGPT per comandi vocali
 api/ocr-gpt.js      # Endpoint serverless per GPT-4 Vision
 ```
 
