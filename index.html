@@ -99,10 +99,12 @@
       online: 'jester_utente_online',
       acquistiSuper: 'jester_utente_acquisti_supermercato',
       acquistiOnline: 'jester_utente_acquisti_online',
-    
+      fav: 'jester_utente_preferiti',
+      ocr: 'jester_ocr_confirmed'
+    };
     // Safe wrapper per localStorage
     const memoryFallback = {};
-    function loadArray(key) {
+    function loadArray(key){
       try {
         return JSON.parse(localStorage.getItem(key) || '[]');
       } catch (e) {
@@ -110,7 +112,7 @@
         return memoryFallback[key] || [];
       }
     }
-    function saveArray(key, arr) {
+    function saveArray(key, arr){
       try {
         localStorage.setItem(key, JSON.stringify(arr));
       } catch (e) {
@@ -292,11 +294,11 @@ rec.interimResults=false;
       recognitionActive=true;
               try {
           rec.start();
-        } catch (err) {
-          console.error('SpeechRecognition start error', err);
-          recognitionActive = false;
-          return;
-        }
+                      } catch (err) {
+        console.error('SpeechRecognition start error', err);
+        recognitionActive=false;
+        return;
+      };       }
       document.getElementById('voiceBtn').textContent='🛑 Stop';
     }
 
