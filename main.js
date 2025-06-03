@@ -1,312 +1,170 @@
-<!DOCTYPE html>
-<html lang="it">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Jester Assistant</title>
-  <link rel="manifest" href="/manifest.json">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    header {
-      background:#4CAF50;
-      color:white;
-      padding:1rem;
-      text-align:center;
-    }
-    nav a {
-      margin:0 0.5rem;
-      color:white;
-      text-decoration:none;
-    }
-    section { padding:1rem; }
-    ul { list-style:none; padding:0; }
-    li { margin:0.2rem 0; }
-    button { margin-left:0.5rem; }
-    .progress {
-      width:100%;
-      background:#ddd;
-      border-radius:8px;
-      overflow:hidden;
-      height:20px;
-    }
-    .progress div {
-      height:100%;
-      width:0;
-      background:red;
-      transition:width 0.3s;
-    }
-  </style>
-</head>
-<body>
-  <header>
-    <h1>Jester Assistant</h1>
-    <nav>
-      <a href="#home">Home</a>
-      <a href="#liste">Liste</a>
-      <a href="#preferiti">Preferiti</a>
-      <a href="#stats">Statistiche</a>
-    </nav>
-  </header>
-
-  <section id="home">
-    <h2>OCR Scontrini</h2>
-    <input type="file" accept="image/*" capture="environment" id="cameraInput" onchange="handlePhotoUpload(event)" style="display:none;">
-    <button onclick="document.getElementById('cameraInput').click()">Scatta Foto</button>
-    <button onclick="confirmOCR()">Conferma Prodotti OCR</button>
-    <pre id="ocrOutput">Nessun prodotto</pre>
-  </section>
-
-  <section id="liste">
-    <h2>Liste</h2>
-    <form id="addForm">
-      <input id="productInput" placeholder="Prodotto" required>
-      <select id="listSelect">
-        <option value="supermercato">Supermercato</option>
-        <option value="online">Online</option>
-      </select>
-      <button type="submit">Aggiungi</button>
-    </form>
-    <button id="voiceBtn">🎤 Comandi Vocali</button>
-    <h3>Supermercato</h3>
-    <ul id="lista-supermercato"></ul>
-    <h3>Online</h3>
-    <ul id="lista-online"></ul>
-    <button onclick="exportLists()">Esporta Liste</button>
-  </section>
-
-  <section id="preferiti">
-    <h2>Preferiti</h2>
-    <form id="favForm">
-      <input id="favInput" placeholder="Prodotto preferito" required>
-      <button type="submit">Aggiungi</button>
-    </form>
-    <ul id="favList"></ul>
-  </section>
-
-  <section id="stats">
-    <h2>Statistiche</h2>
-    <div id="statText"></div>
-    <div class="progress"><div id="progressBar"></div></div>
-  </section>
-
-  <script>
-    const LS = {
-      super: 'jester_utente_supermercato',
-      online: 'jester_utente_online',
-      acquistiSuper: 'jester_utente_acquisti_supermercato',
-      acquistiOnline: 'jester_utente_acquisti_online',
-      fav: 'jester_utente_preferiti',
-      ocr: 'jester_ocr_confirmed'
-    };
-
-    function loadArray(key){
-      return JSON.parse(localStorage.getItem(key)||'[]');
-    }
-    function saveArray(key, arr){
-      localStorage.setItem(key, JSON.stringify(arr));
-    }
-
-    function renderLists(){
-      const sList = document.getElementById('lista-supermercato');
-      const oList = document.getElementById('lista-online');
-      sList.innerHTML='';
-      oList.innerHTML='';
-      loadArray(LS.super).forEach(p=>sList.appendChild(makeItem(p,'super')));
-      loadArray(LS.online).forEach(p=>oList.appendChild(makeItem(p,'online')));
-      renderStats();
-    }
-
-    function makeItem(prod,list){
-      const li=document.createElement('li');
-      li.textContent=prod;
-      const btnDel=document.createElement('button');
-      btnDel.textContent='❌';
-      btnDel.onclick=()=>{removeProduct(list,prod)};
-      const btnDone=document.createElement('button');
-      btnDone.textContent='✅';
-      btnDone.onclick=()=>{markDone(list,prod)};
-      li.appendChild(btnDel);li.appendChild(btnDone);
-      return li;
-    }
-
-    function removeProduct(list,prod){
-      const key=list==='super'?LS.super:LS.online;
-      const arr=loadArray(key).filter(i=>i!==prod);
-      saveArray(key,arr);
-      renderLists();
-    }
-
-    function markDone(list,prod){
-      removeProduct(list,prod);
-      const doneKey=list==='super'?LS.acquistiSuper:LS.acquistiOnline;
-      const arr=loadArray(doneKey);arr.push(prod);saveArray(doneKey,arr);
-      renderLists();
-    }
-
-    document.getElementById('addForm').addEventListener('submit',e=>{
-      e.preventDefault();
-      const prod=document.getElementById('productInput').value.trim();
-      const list=document.getElementById('listSelect').value;
-      if(!prod) return;
-      const key=list==='supermercato'?LS.super:LS.online;
-      const arr=loadArray(key);arr.push(prod);saveArray(key,arr);
-      document.getElementById('productInput').value='';
-      renderLists();
-    });
-
-    document.getElementById('favForm').addEventListener('submit',e=>{
-      e.preventDefault();
-      const prod=document.getElementById('favInput').value.trim();
-      if(!prod) return;
-      const arr=loadArray(LS.fav);arr.push(prod);saveArray(LS.fav,arr);
-      document.getElementById('favInput').value='';
-      renderFav();
-    });
-
-    function renderFav(){
-      const ul=document.getElementById('favList');
-      ul.innerHTML='';
-      loadArray(LS.fav).forEach(p=>{
-        const li=document.createElement('li');
-        li.textContent=p;
-        const b=document.createElement('button');
-        b.textContent='❌';
-        b.onclick=()=>{removeFav(p)};
-        li.appendChild(b);
-        ul.appendChild(li);
-      });
-    }
-
-    function removeFav(prod){
-      const arr=loadArray(LS.fav).filter(i=>i!==prod);
-      saveArray(LS.fav,arr);
-      renderFav();
-    }
-
-    function exportLists(){
-      const sup=loadArray(LS.super).join('\n');
-      const onl=loadArray(LS.online).join('\n');
-      const txt=`Supermercato:\n${sup}\n\nOnline:\n${onl}`;
-      const blob=new Blob([txt],{type:'text/plain'});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement('a');
-      a.href=url;a.download='liste_jester.txt';a.click();
-      URL.revokeObjectURL(url);
-    }
-
-    function renderStats(){
-      const total=loadArray(LS.super).length+loadArray(LS.online).length;
-      const done=loadArray(LS.acquistiSuper).length+loadArray(LS.acquistiOnline).length;
-      const perc=total?Math.round((done/total)*100):0;
-      const bar=document.getElementById('progressBar');
-      bar.style.width=perc+'%';
-      bar.style.background=perc<33?'red':(perc<66?'yellow':'green');
-      document.getElementById('statText').textContent=`${done} acquistati su ${total} totali (${perc}%)`;
-    }
-
-    function handlePhotoUpload(event){
-      const file=event.target.files[0];
-      if(!file) return;
-      const r=new FileReader();
-      r.onload=async e=>{
-        const base64=e.target.result;
-        document.getElementById('ocrOutput').textContent='Analisi in corso...';
-        try{
-          const res=await fetch('/api/ocr-gpt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64Image:base64})});
-          const j=await res.json();
-          const txt=j.choices?.[0]?.message?.content||'';
-          document.getElementById('ocrOutput').textContent=txt;
-        }catch(err){
-          document.getElementById('ocrOutput').textContent='Errore OCR';
-        }
-      };
-      r.readAsDataURL(file);
-    }
-
-    function confirmOCR(){
-      const lines=document.getElementById('ocrOutput').textContent.split('\n').map(l=>l.trim()).filter(Boolean);
-      const stored=loadArray(LS.ocr);
-      const merged=[...stored,...lines];
-      saveArray(LS.ocr,merged);
-      const done=loadArray(LS.acquistiSuper);
-      saveArray(LS.acquistiSuper,[...done,...lines]);
-      renderStats();
-    }
-
-    let rec;
-    let recognitionActive=false;
-
-        function handleSpeech(txt){
-      transcriptBox.textContent=txt;
-      const lower=txt.toLowerCase();
-      if(waitingForCommand){
-        waitingForCommand=false;
-        sendToGPT(lower);
-        return;
-      }
-      const idx=lower.indexOf('ciao jester');
-      if(idx!==-1){
-        const rest=txt.substring(idx+11).trim();
-        speak('Dimmi cosa vuoi fare');
-        if(rest){
-          sendToGPT(rest);
-        }else{
-          waitingForCommand=true;
-        }
-        return;
-      }
-      executeCommand(lower);
-    
-
-    function startRecognition(){
-      if(recognitionActive) return;
-      if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
-        alert('Speech Recognition non supportata');
-        return;
-      }
-      if(!rec){
-        rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
-        rec.lang='it-IT';
-        rec.continuous=true;
-        
-                rec.onresult=async e=>{
-          const txt=e.results[e.resultIndex][0].transcript.trim();
-          handleSpeech(txt);
-        };
-rec.interimResults=false;
-        
-      recognitionActive=true;
-              try {
-          rec.start();
-        } catch (err) {
-          console.error('SpeechRecognition start error', err);
-          recognitionActive = false;
-          return;
-        }
-      document.getElementById('voiceBtn').textContent='🛑 Stop';
-    }
-
-    function stopRecognition(){
-      if(rec){
-        recognitionActive=false;
-        rec.stop();
-      }
-      document.getElementById('voiceBtn').textContent='🎤 Comandi Vocali';
-    }
-
-    function toggleRecognition(){
-      if(recognitionActive) stopRecognition(); else startRecognition();
-    }
-    document.getElementById('voiceBtn').onclick=toggleRecognition;
-
-    function renderAll(){
-      renderLists();
-      renderFav();
-      renderStats();
-    }
-
-          document.addEventListener('DOMContentLoaded', renderAll);
+diff --git a//dev/null b/main.js
+index 0000000000000000000000000000000000000000..79f70cba358c3390ae10bdd9562cee963ef8d967 100644
+--- a//dev/null
++++ b/main.js
+@@ -0,0 +1,165 @@
++const storageKeys = {
++  super: 'jester_utente_supermercato',
++  online: 'jester_utente_online',
++  acqSuper: 'jester_utente_acquisti_supermercato',
++  acqOnline: 'jester_utente_acquisti_online',
++  fav: 'jester_utente_preferiti'
++};
++
++function loadList(key) {
++  return JSON.parse(localStorage.getItem(key) || '[]');
++}
++function saveList(key, arr) {
++  localStorage.setItem(key, JSON.stringify(arr));
++}
++
++function render() {
++  ['super','online'].forEach(tipo => {
++    const listEl = document.getElementById(tipo === 'super' ? 'listSuper' : 'listOnline');
++    listEl.innerHTML = '';
++    const items = loadList(storageKeys[tipo]);
++    const done = loadList(tipo === 'super' ? storageKeys.acqSuper : storageKeys.acqOnline);
++    items.forEach((item)=>{
++      const li = document.createElement('li');
++      li.className = done.includes(item) ? 'completed' : '';
++      const span = document.createElement('span');
++      span.textContent = item;
++      const check = document.createElement('input');
++      check.type = 'checkbox';
++      check.checked = done.includes(item);
++      check.onchange = () => toggleDone(tipo,item);
++      const remove = document.createElement('button');
++      remove.textContent='❌';
++      remove.onclick=()=>removeItem(tipo,item);
++      li.append(check,span,remove);
++      listEl.appendChild(li);
++    });
++    const prog = document.getElementById(tipo==='super'?'progSuper':'progOnline');
++    const val = items.length? (100*done.length/items.length):0;
++    prog.value = val;
++  });
++
++  const favEl = document.getElementById('listFav');
++  favEl.innerHTML='';
++  loadList(storageKeys.fav).forEach(item=>{
++    const li=document.createElement('li');
++    const span=document.createElement('span');
++    span.textContent=item;
++    const addBtn=document.createElement('button');
++    addBtn.textContent='➕';
++    addBtn.onclick=()=>{
++      document.getElementById('inputSuper').value=item;
++    };
++    li.append(span,addBtn);
++    favEl.appendChild(li);
++  });
++}
++
++function addItem(tipo){
++  const input=document.getElementById(tipo==='super'?'inputSuper':'inputOnline');
++  const val=input.value.trim();
++  if(!val) return;
++  const list=loadList(storageKeys[tipo]);
++  list.push(val);
++  saveList(storageKeys[tipo],list);
++  input.value='';
++  render();
++}
++function removeItem(tipo,item){
++  let list=loadList(storageKeys[tipo]);
++  list=list.filter(i=>i!==item);
++  saveList(storageKeys[tipo],list);
++  let done=loadList(tipo==='super'?storageKeys.acqSuper:storageKeys.acqOnline);
++  done=done.filter(i=>i!==item);
++  saveList(tipo==='super'?storageKeys.acqSuper:storageKeys.acqOnline,done);
++  render();
++}
++function toggleDone(tipo,item){
++  let done=loadList(tipo==='super'?storageKeys.acqSuper:storageKeys.acqOnline);
++  if(done.includes(item)){
++    done=done.filter(i=>i!==item);
++  }else{
++    done.push(item);
++  }
++  saveList(tipo==='super'?storageKeys.acqSuper:storageKeys.acqOnline,done);
++  render();
++}
++function exportList(tipo){
++  const items=loadList(storageKeys[tipo]);
++  const text=items.join('\n');
++  const blob=new Blob([text],{type:'text/plain'});
++  const url=URL.createObjectURL(blob);
++  const a=document.createElement('a');
++  a.href=url;
++  a.download=`${tipo}.txt`;
++  a.click();
++  URL.revokeObjectURL(url);
++}
++function addFav(){
++  const input=document.getElementById('inputFav');
++  const val=input.value.trim();
++  if(!val) return;
++  const fav=loadList(storageKeys.fav);
++  fav.push(val);
++  saveList(storageKeys.fav,fav);
++  input.value='';
++  render();
++}
++
++async function handlePhoto(e){
++  const file=e.target.files[0];
++  if(!file) return;
++  const reader=new FileReader();
++  reader.onload=async ev=>{
++    const base64=ev.target.result;
++    document.getElementById('ocrOutput').textContent='🧠 Analisi in corso...';
++    try{
++      const res=await fetch('/api/ocr-gpt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64Image:base64})});
++      if(!res.ok) throw new Error(await res.text());
++      const data=await res.json();
++      const content=data.choices?.[0]?.message?.content||'';
++      document.getElementById('ocrOutput').textContent=content;
++      localStorage.setItem('jester_ocr_confirmed',content);
++    }catch(err){
++      document.getElementById('ocrOutput').textContent='Errore: '+err.message;
++    }
++  };
++  reader.readAsDataURL(file);
++}
++
++let recognition;
++function startVoice(){
++  if(!('webkitSpeechRecognition'in window||'SpeechRecognition'in window)){
++    alert('API Speech non supportata');
++    return;
++  }
++  recognition = new (window.SpeechRecognition||window.webkitSpeechRecognition)();
++  recognition.lang='it-IT';
++  recognition.onresult=async e=>{
++    let text=e.results[0][0].transcript.toLowerCase();
++    if(text.startsWith('ciao jester')) text=text.replace('ciao jester','').trim();
++    if(!text) return;
++    try{
++      const res=await fetch('/api/chat-gpt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text})});
++      if(!res.ok) throw new Error(await res.text());
++      const data=await res.json();
++      const cmdStr=data.choices?.[0]?.message?.content||'';
++      const cmd=JSON.parse(cmdStr);
++      if(cmd.azione==='aggiungi'){
++        const input=cmd.lista==='online'?document.getElementById('inputOnline'):document.getElementById('inputSuper');
++        input.value=cmd.prodotto;
++        addItem(cmd.lista==='online'?'online':'super');
++      }
++      if(cmd.azione==='rimuovi') removeItem(cmd.lista==='online'?'online':'super',cmd.prodotto);
++      if(cmd.azione==='completa') toggleDone(cmd.lista==='online'?'online':'super',cmd.prodotto);
++    }catch(err){
++      console.error(err);
++    }
++  };
++  recognition.start();
++}
++
++render();
++if('serviceWorker'in navigator){
++  navigator.serviceWorker.register('/serviceWorker.js');
++}
