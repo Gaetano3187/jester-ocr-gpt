@@ -1,3 +1,4 @@
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a//dev/null b/api/ocr-gpt.js
 index 0000000000000000000000000000000000000000..e09dbdebe04a7ff6299391c9ec812414c8be3a82 100644
 --- a//dev/null
@@ -44,3 +45,6 @@ index 0000000000000000000000000000000000000000..e09dbdebe04a7ff6299391c9ec812414
 +    res.status(500).send(err.toString());
 +  }
 +}
+ 
+EOF
+)
