@@ -3,18 +3,28 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  // Parse body whether it's already an object or a string
-  const body = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
-  const { base64Image } = body;
+  let body = req.body;
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch {
+      body = {};
+    }
+  }
 
+  const { base64Image } = body || {};
   if (!base64Image) {
     return res.status(400).json({ error: 'base64Image is required' });
   }
 
   if (!process.env.OPENAI_API_KEY) {
-    console.error('Missing OPENAI_API_KEY');
+    console.error('OPENAI_API_KEY not set');
     return res.status(500).json({ error: 'Server misconfigured' });
   }
+
+  const imageData = base64Image.startsWith('data:')
+    ? base64Image
+    : `data:image/png;base64,${base64Image}`;
 
   try {
     const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -35,7 +45,7 @@ export default async function handler(req, res) {
               },
               {
                 type: 'image_url',
-                image_url: { url: base64Image }
+                image_url: { url: imageData }
               }
             ]
           }
@@ -45,8 +55,8 @@ export default async function handler(req, res) {
     });
 
     if (!openaiRes.ok) {
-      const errorText = await openaiRes.text();
-      return res.status(openaiRes.status).json({ error: 'OpenAI Error', details: errorText });
+      const details = await openaiRes.text();
+      return res.status(openaiRes.status).json({ error: 'OpenAI Error', details });
     }
 
     const data = await openaiRes.json();
