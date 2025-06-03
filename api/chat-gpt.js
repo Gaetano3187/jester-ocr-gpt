@@ -1,64 +1,58 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  let body = req.body;
-  if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch {
-      body = {};
-    }
-  }
-
-  const { prompt } = body || {};
-  if (!prompt) {
-    return res.status(400).json({ error: 'prompt is required' });
-  }
-
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('Missing OPENAI_API_KEY');
-    return res.status(500).json({ error: 'Server misconfigured' });
-  }
-
-  try {
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
-        messages: [
-          {
-            role: 'system',
-            content:
-              'Sei un assistente che converte i comandi vocali in istruzioni per Jester. ' +
-              "Riconosci quando l'utente elenca più prodotti. " +
-              'Per ogni prodotto da aggiungere o rimuovere genera un comando nel formato "aggiungi [prodotto] alla lista [online|supermercato]" o "rimuovi [prodotto] dalla lista [online|supermercato]". ' +
-              'Se l\'utente comunica di aver comprato dei prodotti rispondi con "ho comprato [prodotti]". ' +
-              'Rispondi solo con i comandi, uno per riga, senza testo extra.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        max_tokens: 50
-      })
-    });
-
-    if (!openaiRes.ok) {
-      const text = await openaiRes.text();
-      return res.status(openaiRes.status).json({ error: 'OpenAI Error', details: text });
-    }
-
-    const data = await openaiRes.json();
-    return res.status(200).json(data);
-  } catch (err) {
-    console.error('Chat GPT error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-}
+diff --git a//dev/null b/api/chat-gpt.js
+index 0000000000000000000000000000000000000000..ee0afd6bb8d7e7b6a403325cc4ab8fe0350d48b5 100644
+--- a//dev/null
++++ b/api/chat-gpt.js
+@@ -0,0 +1,53 @@
++export default async function handler(req, res) {
++  if (req.method !== 'POST') {
++    res.status(405).json({ error: 'Method not allowed' });
++    return;
++  }
++
++  const { text } = req.body || {};
++  if (!text) {
++    res.status(400).json({ error: 'Missing text' });
++    return;
++  }
++
++  const apiKey = process.env.OPENAI_API_KEY;
++  if (!apiKey) {
++    res.status(500).json({ error: 'Missing OpenAI API key' });
++    return;
++  }
++
++  try {
++    const response = await fetch('https://api.openai.com/v1/chat/completions', {
++      method: 'POST',
++      headers: {
++        'Content-Type': 'application/json',
++        'Authorization': `Bearer ${apiKey}`
++      },
++      body: JSON.stringify({
++        model: 'gpt-3.5-turbo',
++        messages: [
++          {
++            role: 'system',
++            content: 'Sei Jester, assistente per le liste della spesa. ' +
++              'Interpreta il comando dell\'utente e rispondi solo con un JSON ' +
++              "{\"azione\":\"aggiungi|rimuovi|completa\", \"lista\":\"supermercato|online|preferiti\", \"prodotto\":\"nome\"}"
++          },
++          { role: 'user', content: text }
++        ],
++        max_tokens: 60,
++        temperature: 0
++      })
++    });
++
++    if (!response.ok) {
++      const errText = await response.text();
++      res.status(response.status).send(errText);
++      return;
++    }
++
++    const data = await response.json();
++    res.status(200).json(data);
++  } catch (err) {
++    res.status(500).json({ error: err.message });
++  }
++}
