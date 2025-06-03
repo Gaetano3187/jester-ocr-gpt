@@ -280,7 +280,13 @@
 rec.interimResults=false;
         
       recognitionActive=true;
-      rec.start();
+              try {
+          rec.start();
+        } catch (err) {
+          console.error('SpeechRecognition start error', err);
+          recognitionActive = false;
+          return;
+        }
       document.getElementById('voiceBtn').textContent='🛑 Stop';
     }
 
