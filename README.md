@@ -1,64 +1,51 @@
  diff --git a/README.md b/README.md
-index 78f2eff8e570a501b1c39c48f27272faa003cb50..a0eb6c4f21f9c7942080d46784bf49fdb91c2167 100644
+index 78f2eff8e570a501b1c39c48f27272faa003cb50..d7c200ba2b4a03a6f231ec67794c9ab0315f6e0f 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,21 +1,47 @@
+@@ -1,21 +1,30 @@
 -# 📚 JESTER – OCR GPT (Vercel Ready)
-+# 🛒 JESTER – Assistente Spesa PWA
++# 🧠 JESTER – Assistente Vocale per la Spesa
  
 -Questa applicazione permette di caricare uno scontrino e inviarlo a GPT-4 Vision per l'estrazione automatica dei prodotti.
-+Jester è un assistente vocale per la gestione della spesa che funziona interamente nel browser. Puoi creare liste di prodotti, gestire preferiti e analizzare scontrini con GPT‑4 Vision. L'app è pensata per il deploy su **Vercel** e richiede solo l'inserimento della chiave OpenAI.
++Web app pronta per il deploy su Vercel che unisce comandi vocali, OCR tramite GPT‑4 Vision e funzioni PWA.
  
- ## ✅ Funzionalità
+-## ✅ Funzionalità
 -- Caricamento immagini da fotocamera
 -- Invio a OpenAI GPT-4 Vision tramite endpoint /api/ocr-gpt
 -- Visualizzazione elenco prodotti riconosciuti
 -- Design responsive e mobile-first
-+- Due liste separate: **Supermercato** e **Online**
-+- Aggiunta e rimozione manuale o tramite comandi vocali (Web Speech API)
-+- Possibilità di marcare i prodotti acquistati e vedere l'avanzamento con barra di progresso
-+- Esportazione delle liste in formato `.txt`
-+- Analisi OCR degli scontrini tramite l'endpoint `/api/ocr-gpt`
-+- Comprensione dei comandi vocali con ChatGPT via `/api/chat-gpt`
-+- Gestione dei preferiti
-+- Funzionamento offline tramite Service Worker e installazione PWA
-+
-+## Storage Locale
-+I dati vengono salvati in `localStorage` con le seguenti chiavi:
-+- `jester_utente_supermercato`
-+- `jester_utente_online`
-+- `jester_utente_acquisti_supermercato`
-+- `jester_utente_acquisti_online`
-+- `jester_utente_preferiti`
-+- `jester_ocr_confirmed`
++## Funzionalità principali
++- Aggiunta e rimozione prodotti con voce o clic
++- Gestione due liste: supermercato e online
++- Preferiti con aggiunta rapida
++- Pulsante "segna come acquistato" con statistiche dinamiche
++- Import prodotti da scontrino tramite `/api/ocr-gpt`
++- Generazione lista `.txt` scaricabile
++- Installabile come PWA e funzionante offline
  
- ## 🚀 Deploy
+-## 🚀 Deploy
 -1. Carica questo progetto su Vercel
 -2. In Settings → Environment Variables, aggiungi:
-+1. Carica questo progetto su **Vercel**
-+2. In *Settings → Environment Variables* aggiungi:
-    ```
+-   ```
 -   OPENAI_API_KEY = sk-xxxxx
-+   OPENAI_API_KEY=sk-xxxxx
-    ```
+-   ```
 -3. Deploya e apri il dominio
-+3. Avvia il deploy e visita il dominio generato
-+
-+## 🧠 Modelli utilizzati
-+- `gpt-3.5-turbo` per la comprensione dei comandi vocali
-+- `gpt-4-vision-preview` per il riconoscimento visivo
++## Struttura progetto
++```
++index.html          ─ interfaccia principale
++serviceWorker.js    ─ caching offline
++manifest.json       ─ configurazione PWA
++api/ocr-gpt.js      ─ endpoint serverless per GPT‑4 Vision
++icon-192.png        ─ icona applicazione
++```
  
 -## 🧠 Modello
 -Usa `gpt-4-vision-preview` per il riconoscimento visivo.
-+## 📂 Struttura del progetto
-+```
-+index.html       # Interfaccia principale
-+main.js          # Logica dell'applicazione
-+manifest.json    # Configurazione PWA
-+serviceWorker.js # Cache offline
-+api/chat-gpt.js  # Endpoint serverless per i comandi vocali
-+api/ocr-gpt.js   # Endpoint serverless per l'OCR dello scontrino
-+install.sh       # Script opzionale di installazione
-+LICENSE          # Licenza del progetto
-+```
++## Deploy su Vercel
++1. Carica il repository su GitHub
++2. Collega il repo a Vercel
++3. In **Settings → Environment Variables** aggiungi
++   `OPENAI_API_KEY = sk-xxxxx`
++4. Avvia il deploy
  
++Dopo il primo caricamento l'app potrà funzionare anche offline.
