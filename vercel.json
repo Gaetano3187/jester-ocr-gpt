@@ -1,11 +1,6 @@
-diff --git a//dev/null b/vercel.json
-index 0000000000000000000000000000000000000000..7803516e649399d5d412f01a0ba28cebb559dc7e 100644
---- a//dev/null
-+++ b/vercel.json
-@@ -0,0 +1,6 @@
-+{
-+  "version": 2,
-+  "functions": {
-+    "api/*.js": { "runtime": "nodejs18.x" }
-+  }
-+}
+{
+  "version": 2,
+  "functions": {
+    "api/*.js": { "runtime": "nodejs18.x" }
+  }
+}
