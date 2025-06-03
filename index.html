@@ -1,39 +1,337 @@
 diff --git a/index.html b/index.html
-index 32ab36c7520f9507e80a6f247eec57a8b56e6350..944bbcf6412692f26831ce770dd93b2ea04e8cf6 100644
+index 32ab36c7520f9507e80a6f247eec57a8b56e6350..a0ff093cf80eb316bcafab38c9112bf073879055 100644
 --- a/index.html
 +++ b/index.html
-@@ -65,34 +65,27 @@
-       const reader = new FileReader();
-       reader.onload = async function (e) {
-         const base64Image = e.target.result;
-         document.getElementById('output').innerText = '🧠 Analisi in corso...';
+@@ -1,98 +1,256 @@
+ <!DOCTYPE html>
+ <html lang="it">
+ <head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+-  <title>Jester OCR GPT</title>
++  <title>Jester - Assistente Spesa</title>
++  <link rel="manifest" href="manifest.json">
+   <style>
+-    body {
+-      font-family: Arial, sans-serif;
+-      padding: 2rem;
+-      background: #f9f9f9;
+-      color: #333;
+-    }
+-    h1 {
+-      color: #4CAF50;
+-    }
+-    button {
+-      padding: 0.6rem 1.2rem;
+-      background: #4CAF50;
+-      color: white;
+-      border: none;
+-      border-radius: 8px;
+-      cursor: pointer;
+-      margin-top: 1rem;
+-    }
+-    #output {
+-      margin-top: 1rem;
+-      background: #fff;
+-      padding: 1rem;
+-      border-radius: 8px;
+-      white-space: pre-line;
+-    }
++    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background:#f5f6fa; color:#333; }
++    header { background:#4CAF50; color:white; padding:1rem; text-align:center; font-size:1.5rem; }
++    main { padding:1rem; max-width:800px; margin:auto; }
++    h2 { color:#4CAF50; }
++    .flex { display:flex; gap:0.5rem; }
++    input[type=text] { flex:1; padding:0.5rem; border:1px solid #ccc; border-radius:4px; }
++    button { padding:0.5rem 0.8rem; border:none; border-radius:4px; background:#4CAF50; color:white; cursor:pointer; }
++    button.secondary { background:#777; }
++    ul { list-style:none; padding:0; }
++    li { background:white; margin-bottom:0.5rem; padding:0.5rem; border-radius:4px; display:flex; justify-content:space-between; align-items:center; }
++    .item-actions button { margin-left:0.3rem; }
++    #progressBar { background:#ddd; border-radius:4px; height:20px; margin-top:0.5rem; overflow:hidden; }
++    #progress { background:#4CAF50; height:100%; width:0; }
++    @media (min-width: 600px) { .lists { display:flex; gap:1rem; } }
+   </style>
+ </head>
+ <body>
+-  <h1>📷 Jester – OCR con GPT</h1>
+-  <p>Carica uno scontrino per estrarre i prodotti.</p>
++  <header>Jester - Assistente Spesa</header>
++  <main>
++    <section class="flex">
++      <input type="text" id="productInput" placeholder="Aggiungi prodotto">
++      <button id="addBtn">Aggiungi</button>
++      <button id="voiceBtn">🎙️</button>
++      <input type="file" accept="image/*" capture="environment" id="receiptInput" style="display:none">
++      <button id="ocrBtn">OCR</button>
++    </section>
  
-         try {
-           const risposta = await inviaFotoAVercel(base64Image);
-           document.getElementById('output').innerText = `📋 Prodotti rilevati:\n${risposta}`;
-         } catch (err) {
-           document.getElementById('output').innerText = '❌ Errore: ' + err.message;
-         }
-       };
+-  <input type="file" accept="image/*" capture="environment" id="cameraInput" onchange="handlePhotoUpload(event)" style="display:none;">
+-  <button onclick="document.getElementById('cameraInput').click()">Scatta Foto (Scontrino)</button>
++    <section class="lists">
++      <div class="list-container">
++        <h2>Supermercato</h2>
++        <ul id="listaSupermercato"></ul>
++      </div>
++      <div class="list-container">
++        <h2>Online</h2>
++        <ul id="listaOnline"></ul>
++      </div>
++    </section>
  
-       reader.readAsDataURL(file);
-     }
-   </script>
+-  <div id="output">📋 Prodotti rilevati appariranno qui...</div>
++    <section>
++      <h2>Preferiti</h2>
++      <ul id="listaPreferiti"></ul>
++    </section>
  
-   <script>
-     if ('serviceWorker' in navigator) {
-       navigator.serviceWorker.register('/serviceWorker.js')
-         .then(reg => console.log("✅ Service Worker registrato:", reg.scope))
-         .catch(err => console.error("❌ Registrazione SW fallita:", err));
-     }
-   </script>
+-  <script>
+-    async function inviaFotoAVercel(base64Image) {
+-      const res = await fetch('/api/ocr-gpt', {
+-        method: 'POST',
+-        headers: { 'Content-Type': 'application/json' },
+-        body: JSON.stringify({ base64Image })
+-      });
++    <section>
++      <h2>Statistiche</h2>
++      <div id="progressBar"><div id="progress"></div></div>
++      <p id="statsText"></p>
++      <button id="downloadBtn" class="secondary">Scarica lista</button>
++    </section>
++  </main>
+ 
+-      if (!res.ok) {
+-        const err = await res.text();
+-        throw new Error('Errore OCR via Vercel: ' + err);
+-      }
++<script>
++const LS_KEYS = {
++  super: 'jester_utente_supermercato',
++  online: 'jester_utente_online',
++  purchasedSuper: 'jester_utente_acquisti_supermercato',
++  purchasedOnline: 'jester_utente_acquisti_online',
++  fav: 'jester_utente_preferiti',
++  ocr: 'jester_ocr_confirmed'
++};
+ 
+-      const result = await res.json();
+-      return result.choices?.[0]?.message?.content || '';
+-    }
++function load(key){ return JSON.parse(localStorage.getItem(key) || '[]'); }
++function save(key,val){ localStorage.setItem(key,JSON.stringify(val)); }
+ 
+-    function handlePhotoUpload(event) {
+-      const file = event.target.files[0];
+-      if (!file) return;
++let listaSuper = load(LS_KEYS.super);
++let listaOnline = load(LS_KEYS.online);
++let acquistatiSuper = load(LS_KEYS.purchasedSuper);
++let acquistatiOnline = load(LS_KEYS.purchasedOnline);
++let preferiti = load(LS_KEYS.fav);
+ 
+-      const reader = new FileReader();
+-      reader.onload = async function (e) {
+-        const base64Image = e.target.result;
+-        document.getElementById('output').innerText = '🧠 Analisi in corso...';
++function render(){
++  const ulSuper = document.getElementById('listaSupermercato');
++  const ulOnline = document.getElementById('listaOnline');
++  const ulFav = document.getElementById('listaPreferiti');
++  ulSuper.innerHTML = '';
++  ulOnline.innerHTML = '';
++  ulFav.innerHTML = '';
+ 
+-        try {
+-          const risposta = await inviaFotoAVercel(base64Image);
+-          document.getElementById('output').innerText = `📋 Prodotti rilevati:\n${risposta}`;
+-        } catch (err) {
+-          document.getElementById('output').innerText = '❌ Errore: ' + err.message;
+-        }
+-      };
++  listaSuper.forEach((p,i)=> ulSuper.appendChild(makeItem(p,i,'super')));
++  listaOnline.forEach((p,i)=> ulOnline.appendChild(makeItem(p,i,'online')));
++  preferiti.forEach((p,i)=> ulFav.appendChild(makeFav(p,i)));
++  updateStats();
++}
+ 
+-      reader.readAsDataURL(file);
+-    }
+-  </script>
++function makeItem(text,index,list){
++  const li = document.createElement('li');
++  li.textContent = text;
++  const actions = document.createElement('span');
++  actions.className='item-actions';
++  const favBtn = document.createElement('button');
++  favBtn.textContent='★';
++  favBtn.onclick=()=>addPreferito(text);
++  const doneBtn=document.createElement('button');
++  doneBtn.textContent='✔';
++  doneBtn.onclick=()=>markPurchased(list,index);
++  const remBtn=document.createElement('button');
++  remBtn.textContent='✖';
++  remBtn.onclick=()=>removeItem(list,index);
++  actions.append(favBtn,doneBtn,remBtn);
++  li.appendChild(actions);
++  return li;
++}
+ 
+-  <script>
+-    if ('serviceWorker' in navigator) {
+-      navigator.serviceWorker.register('/serviceWorker.js')
+-        .then(reg => console.log("✅ Service Worker registrato:", reg.scope))
+-        .catch(err => console.error("❌ Registrazione SW fallita:", err));
+-    }
+-  </script>
++function makeFav(text,index){
++  const li=document.createElement('li');
++  li.textContent=text;
++  const addBtn=document.createElement('button');
++  addBtn.textContent='+';
++  addBtn.onclick=()=>addProduct(text,'super');
++  li.appendChild(addBtn);
++  return li;
++}
++
++function addPreferito(text){
++  if(!preferiti.includes(text)){
++    preferiti.push(text);
++    save(LS_KEYS.fav,preferiti);
++    render();
++  }
++}
  
 -  <script>
 -    if ('serviceWorker' in navigator) {
 -      navigator.serviceWorker.register('/serviceWorker.js')
 -        .then(reg => console.log('✅ Service Worker registrato:', reg.scope))
 -        .catch(err => console.error('❌ Errore SW:', err));
--    }
++function addProduct(text,list){
++  if(!text) return;
++  const target=list==='online'?listaOnline:listaSuper;
++  if(!target.includes(text)){
++    target.push(text);
++    save(list==='online'?LS_KEYS.online:LS_KEYS.super,target);
++    render();
++  }
++}
++
++function removeItem(list,index){
++  const target=list==='online'?listaOnline:listaSuper;
++  target.splice(index,1);
++  save(list==='online'?LS_KEYS.online:LS_KEYS.super,target);
++  render();
++}
++
++function markPurchased(list,index){
++  const target=list==='online'?listaOnline:listaSuper;
++  const purchased=list==='online'?acquistatiOnline:acquistatiSuper;
++  purchased.push(target[index]);
++  save(list==='online'?LS_KEYS.purchasedOnline:LS_KEYS.purchasedSuper,purchased);
++  target.splice(index,1);
++  save(list==='online'?LS_KEYS.online:LS_KEYS.super,target);
++  render();
++}
++
++function updateStats(){
++  const tot=listaSuper.length+listaOnline.length+acquistatiSuper.length+acquistatiOnline.length;
++  const done=acquistatiSuper.length+acquistatiOnline.length;
++  const perc=tot?Math.round(done/tot*100):0;
++  document.getElementById('progress').style.width=perc+'%';
++  document.getElementById('statsText').textContent=`Totale: ${tot} - Acquistati: ${done} (${perc}%)`;
++}
++
++// Add product via input
++document.getElementById('addBtn').onclick=function(){
++  const val=document.getElementById('productInput').value.trim();
++  addProduct(val,'super');
++  document.getElementById('productInput').value='';
++};
++
++// Download txt
++document.getElementById('downloadBtn').onclick=function(){
++  const content=[...listaSuper,...listaOnline].join('\n');
++  const blob=new Blob([content],{type:'text/plain'});
++  const a=document.createElement('a');
++  a.href=URL.createObjectURL(blob);
++  a.download='spesa.txt';
++  a.click();
++};
++
++// Voice commands
++const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
++if(SpeechRecognition){
++  const recognition = new SpeechRecognition();
++  recognition.lang='it-IT';
++  recognition.interimResults=false;
++  recognition.onresult=e=>{
++    const text=e.results[0][0].transcript.toLowerCase();
++    parseVoice(text);
++  };
++  document.getElementById('voiceBtn').onclick=()=>recognition.start();
++}
++function parseVoice(t){
++  const addSuper = t.match(/aggiungi (.*) alla lista supermercato/);
++  const addOnline = t.match(/aggiungi (.*) alla lista online/);
++  const removeSuper = t.match(/togli (.*) dalla lista supermercato/);
++  const removeOnline = t.match(/togli (.*) dalla lista online/);
++  const done = t.match(/segna (.*) come acquistato/);
++  if(addSuper) return addProduct(addSuper[1].trim(),'super');
++  if(addOnline) return addProduct(addOnline[1].trim(),'online');
++  if(removeSuper){
++    const idx=listaSuper.indexOf(removeSuper[1].trim());
++    if(idx>-1) removeItem('super',idx);
++    return;
++  }
++  if(removeOnline){
++    const idx=listaOnline.indexOf(removeOnline[1].trim());
++    if(idx>-1) removeItem('online',idx);
++    return;
++  }
++  if(done){
++    let idx=listaSuper.indexOf(done[1].trim());
++    if(idx>-1) return markPurchased('super',idx);
++    idx=listaOnline.indexOf(done[1].trim());
++    if(idx>-1) return markPurchased('online',idx);
++  }
++}
++
++// OCR
++const receiptInput=document.getElementById('receiptInput');
++document.getElementById('ocrBtn').onclick=()=>receiptInput.click();
++receiptInput.onchange=handlePhotoUpload;
++async function handlePhotoUpload(e){
++  const file=e.target.files[0];
++  if(!file) return;
++  const reader=new FileReader();
++  reader.onload=async evt=>{
++    const base64=evt.target.result;
++    try{
++      const res=await fetch('/api/ocr-gpt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64Image:base64})});
++      if(!res.ok) throw new Error(await res.text());
++      const data=await res.json();
++      const txt=data.choices?.[0]?.message?.content||'';
++      if(txt){
++        if(confirm('Aggiungere i seguenti prodotti?\n'+txt)){
++          save(LS_KEYS.ocr,txt);
++          txt.split(/\n|,/).forEach(p=>addProduct(p.trim(),'super'));
++        }
++      }
++    }catch(err){
++      alert('Errore OCR: '+err.message);
+     }
 -  </script>
++  };
++  reader.readAsDataURL(file);
++}
++
++render();
++</script>
++<script>
++if('serviceWorker' in navigator){
++  navigator.serviceWorker.register('/serviceWorker.js');
++}
++</script>
  </body>
  </html>
+
