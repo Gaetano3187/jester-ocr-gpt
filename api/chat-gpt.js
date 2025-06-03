@@ -1,24 +1,16 @@
-diff --git a//dev/null b/api/chat-gpt.js
-index 0000000000000000000000000000000000000000..ee0afd6bb8d7e7b6a403325cc4ab8fe0350d48b5 100644
+diff --git a//dev/null b/api/ocr-gpt.js
+index 0000000000000000000000000000000000000000..e09dbdebe04a7ff6299391c9ec812414c8be3a82 100644
 --- a//dev/null
-+++ b/api/chat-gpt.js
-@@ -0,0 +1,53 @@
++++ b/api/ocr-gpt.js
+@@ -0,0 +1,41 @@
 +export default async function handler(req, res) {
 +  if (req.method !== 'POST') {
-+    res.status(405).json({ error: 'Method not allowed' });
-+    return;
++    return res.status(405).send('Method Not Allowed');
 +  }
 +
-+  const { text } = req.body || {};
-+  if (!text) {
-+    res.status(400).json({ error: 'Missing text' });
-+    return;
-+  }
-+
-+  const apiKey = process.env.OPENAI_API_KEY;
-+  if (!apiKey) {
-+    res.status(500).json({ error: 'Missing OpenAI API key' });
-+    return;
++  const { base64Image } = req.body || {};
++  if (!base64Image) {
++    return res.status(400).send('Missing image');
 +  }
 +
 +  try {
@@ -26,33 +18,29 @@ index 0000000000000000000000000000000000000000..ee0afd6bb8d7e7b6a403325cc4ab8fe0
 +      method: 'POST',
 +      headers: {
 +        'Content-Type': 'application/json',
-+        'Authorization': `Bearer ${apiKey}`
++        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
 +      },
 +      body: JSON.stringify({
-+        model: 'gpt-3.5-turbo',
-+        messages: [
-+          {
-+            role: 'system',
-+            content: 'Sei Jester, assistente per le liste della spesa. ' +
-+              'Interpreta il comando dell\'utente e rispondi solo con un JSON ' +
-+              "{\"azione\":\"aggiungi|rimuovi|completa\", \"lista\":\"supermercato|online|preferiti\", \"prodotto\":\"nome\"}"
-+          },
-+          { role: 'user', content: text }
-+        ],
-+        max_tokens: 60,
-+        temperature: 0
++        model: 'gpt-4-vision-preview',
++        messages: [{
++          role: 'user',
++          content: [
++            { type: 'text', text: 'Estrai l\'elenco dei prodotti dallo scontrino in formato elenco puntato.' },
++            { type: 'image_url', image_url: { url: base64Image } }
++          ]
++        }],
++        max_tokens: 300
 +      })
 +    });
 +
 +    if (!response.ok) {
-+      const errText = await response.text();
-+      res.status(response.status).send(errText);
-+      return;
++      const err = await response.text();
++      return res.status(500).send(err);
 +    }
 +
 +    const data = await response.json();
 +    res.status(200).json(data);
 +  } catch (err) {
-+    res.status(500).json({ error: err.message });
++    res.status(500).send(err.toString());
 +  }
 +}
