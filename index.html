@@ -240,30 +240,27 @@
     let rec;
     let recognitionActive=false;
 
-    function executeCommand(t){
-      t=t.toLowerCase();
-      if(t.includes('aggiungi')){
-        const m=t.match(/aggiungi (.+) alla lista (online|supermercato)/);
-        if(m){
-          const prod=m[1];
-          const list=m[2];
-          const key=list==='supermercato'?LS.super:LS.online;
-          const arr=loadArray(key);arr.push(prod);saveArray(key,arr);
-        }
-      }else if(t.includes('rimuovi')){
-        const m=t.match(/rimuovi (.+) dalla lista (online|supermercato)/);
-        if(m){
-          removeProduct(m[2]==='supermercato'?'super':'online',m[1]);
-        }
-      }else if(t.includes('ho comprato')){
-        const m=t.match(/ho comprato (.+)/);
-        if(m){
-          markDone('super',m[1]);
-          markDone('online',m[1]);
-        }
+        function handleSpeech(txt){
+      transcriptBox.textContent=txt;
+      const lower=txt.toLowerCase();
+      if(waitingForCommand){
+        waitingForCommand=false;
+        sendToGPT(lower);
+        return;
       }
-      renderLists();
-    }
+      const idx=lower.indexOf('ciao jester');
+      if(idx!==-1){
+        const rest=txt.substring(idx+11).trim();
+        speak('Dimmi cosa vuoi fare');
+        if(rest){
+          sendToGPT(rest);
+        }else{
+          waitingForCommand=true;
+        }
+        return;
+      }
+      executeCommand(lower);
+    
 
     function startRecognition(){
       if(recognitionActive) return;
@@ -275,19 +272,13 @@
         rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
         rec.lang='it-IT';
         rec.continuous=true;
-        rec.interimResults=false;
-        rec.onresult=e=>{
-          const txt=Array.from(e.results).map(r=>r[0].transcript).join(' ').toLowerCase();
-          if(!txt) return;
-          if(txt.includes('ciao jester')){
-            const cmd=txt.split('ciao jester')[1].trim();
-            if(cmd) executeCommand(cmd);
-          }else{
-            executeCommand(txt);
-          }
+        
+                rec.onresult=async e=>{
+          const txt=e.results[e.resultIndex][0].transcript.trim();
+          handleSpeech(txt);
         };
-        rec.onend=()=>{ if(recognitionActive) rec.start(); };
-      }
+rec.interimResults=false;
+        
       recognitionActive=true;
       rec.start();
       document.getElementById('voiceBtn').textContent='🛑 Stop';
