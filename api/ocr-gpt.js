@@ -1,25 +1,34 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
   }
 
-  let body = req.body;
-  if (typeof body === 'string') {
-    try {
-      body = JSON.parse(body);
-    } catch {
-      body = {};
-    }
+  let rawBody = '';
+  if (req.body) {
+    rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+  } else {
+    for await (const chunk of req) rawBody += chunk;
+  }
+
+  let body;
+  try {
+    body = typeof req.body === 'object' && req.body !== null ? req.body : JSON.parse(rawBody || '{}');
+  } catch {
+    body = {};
   }
 
   const { base64Image } = body || {};
   if (!base64Image) {
-    return res.status(400).json({ error: 'base64Image is required' });
+    res.status(400).json({ error: 'base64Image is required' });
+    return;
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    console.error('OPENAI_API_KEY not set');
-    return res.status(500).json({ error: 'Server misconfigured' });
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) {
+    console.error('Missing OPENAI_API_KEY');
+    res.status(500).json({ error: 'Server misconfigured' });
+    return;
   }
 
   const imageData = base64Image.startsWith('data:')
@@ -31,7 +40,7 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'gpt-4-vision-preview',
@@ -39,14 +48,8 @@ export default async function handler(req, res) {
           {
             role: 'user',
             content: [
-              {
-                type: 'text',
-                text: 'Estrarre la lista dei prodotti con i prezzi da questo scontrino:'
-              },
-              {
-                type: 'image_url',
-                image_url: { url: imageData }
-              }
+              { type: 'text', text: 'Estrarre la lista dei prodotti con i prezzi da questo scontrino:' },
+              { type: 'image_url', image_url: { url: imageData } }
             ]
           }
         ],
@@ -55,14 +58,15 @@ export default async function handler(req, res) {
     });
 
     if (!openaiRes.ok) {
-      const details = await openaiRes.text();
-      return res.status(openaiRes.status).json({ error: 'OpenAI Error', details });
+      const text = await openaiRes.text();
+      res.status(openaiRes.status).json({ error: 'OpenAI Error', details: text });
+      return;
     }
 
     const data = await openaiRes.json();
-    return res.status(200).json(data);
+    res.status(200).json(data);
   } catch (err) {
     console.error('OCR GPT error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error' });
   }
 }
