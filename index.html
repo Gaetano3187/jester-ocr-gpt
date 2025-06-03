@@ -237,36 +237,74 @@
       renderStats();
     }
 
-    function initSpeech(){
-      const rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
-      rec.lang='it-IT';
-      rec.onresult=e=>{
-        const t=e.results[0][0].transcript.toLowerCase();
-        if(t.includes('aggiungi')){
-          const m=t.match(/aggiungi (.+) alla lista (online|supermercato)/);
-          if(m){
-            const prod=m[1];
-            const list=m[2];
-            const key=list==='supermercato'?LS.super:LS.online;
-            const arr=loadArray(key);arr.push(prod);saveArray(key,arr);
-          }
-        }else if(t.includes('rimuovi')){
-          const m=t.match(/rimuovi (.+) dalla lista (online|supermercato)/);
-          if(m){
-            removeProduct(m[2]==='supermercato'?'super':'online',m[1]);
-          }
-        }else if(t.includes('ho comprato')){
-          const m=t.match(/ho comprato (.+)/);
-          if(m){
-            markDone('super',m[1]);
-            markDone('online',m[1]);
-          }
+    let rec;
+    let recognitionActive=false;
+
+    function executeCommand(t){
+      t=t.toLowerCase();
+      if(t.includes('aggiungi')){
+        const m=t.match(/aggiungi (.+) alla lista (online|supermercato)/);
+        if(m){
+          const prod=m[1];
+          const list=m[2];
+          const key=list==='supermercato'?LS.super:LS.online;
+          const arr=loadArray(key);arr.push(prod);saveArray(key,arr);
         }
-        renderLists();
-      };
-      rec.start();
+      }else if(t.includes('rimuovi')){
+        const m=t.match(/rimuovi (.+) dalla lista (online|supermercato)/);
+        if(m){
+          removeProduct(m[2]==='supermercato'?'super':'online',m[1]);
+        }
+      }else if(t.includes('ho comprato')){
+        const m=t.match(/ho comprato (.+)/);
+        if(m){
+          markDone('super',m[1]);
+          markDone('online',m[1]);
+        }
+      }
+      renderLists();
     }
-    document.getElementById('voiceBtn').onclick=initSpeech;
+
+    function startRecognition(){
+      if(recognitionActive) return;
+      if(!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)){
+        alert('Speech Recognition non supportata');
+        return;
+      }
+      if(!rec){
+        rec=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
+        rec.lang='it-IT';
+        rec.continuous=true;
+        rec.interimResults=false;
+        rec.onresult=e=>{
+          const txt=Array.from(e.results).map(r=>r[0].transcript).join(' ').toLowerCase();
+          if(!txt) return;
+          if(txt.includes('ciao jester')){
+            const cmd=txt.split('ciao jester')[1].trim();
+            if(cmd) executeCommand(cmd);
+          }else{
+            executeCommand(txt);
+          }
+        };
+        rec.onend=()=>{ if(recognitionActive) rec.start(); };
+      }
+      recognitionActive=true;
+      rec.start();
+      document.getElementById('voiceBtn').textContent='🛑 Stop';
+    }
+
+    function stopRecognition(){
+      if(rec){
+        recognitionActive=false;
+        rec.stop();
+      }
+      document.getElementById('voiceBtn').textContent='🎤 Comandi Vocali';
+    }
+
+    function toggleRecognition(){
+      if(recognitionActive) stopRecognition(); else startRecognition();
+    }
+    document.getElementById('voiceBtn').onclick=toggleRecognition;
 
     function renderAll(){
       renderLists();
