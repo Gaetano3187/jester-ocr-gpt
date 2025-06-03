@@ -1,8 +1,8 @@
 diff --git a/README.md b/README.md
-index 78f2eff8e570a501b1c39c48f27272faa003cb50..632b2e16b8a8e9246e8858d962dfb7d7cf359062 100644
+index 78f2eff8e570a501b1c39c48f27272faa003cb50..a0eb6c4f21f9c7942080d46784bf49fdb91c2167 100644
 --- a/README.md
 +++ b/README.md
-@@ -1,21 +1,35 @@
+@@ -1,21 +1,47 @@
 -# 📚 JESTER – OCR GPT (Vercel Ready)
 +# 🛒 JESTER – Assistente Spesa PWA
  
@@ -43,10 +43,22 @@ index 78f2eff8e570a501b1c39c48f27272faa003cb50..632b2e16b8a8e9246e8858d962dfb7d7
     ```
 -3. Deploya e apri il dominio
 +3. Avvia il deploy e visita il dominio generato
- 
--## 🧠 Modello
--Usa `gpt-4-vision-preview` per il riconoscimento visivo.
++
 +## 🧠 Modelli utilizzati
 +- `gpt-3.5-turbo` per la comprensione dei comandi vocali
 +- `gpt-4-vision-preview` per il riconoscimento visivo
+ 
+-## 🧠 Modello
+-Usa `gpt-4-vision-preview` per il riconoscimento visivo.
++## 📂 Struttura del progetto
++```
++index.html       # Interfaccia principale
++main.js          # Logica dell'applicazione
++manifest.json    # Configurazione PWA
++serviceWorker.js # Cache offline
++api/chat-gpt.js  # Endpoint serverless per i comandi vocali
++api/ocr-gpt.js   # Endpoint serverless per l'OCR dello scontrino
++install.sh       # Script opzionale di installazione
++LICENSE          # Licenza del progetto
++```
  
