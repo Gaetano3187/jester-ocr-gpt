@@ -35,7 +35,11 @@ export default async function handler(req, res) {
           {
             role: 'system',
             content:
-              'Analizza il comando vocale e restituisci il testo da eseguire per Jester. Rispondi solo con il comando e niente altro.'
+              'Sei un assistente che converte i comandi vocali in istruzioni per Jester. ' +
+              "Riconosci quando l'utente elenca più prodotti. " +
+              'Per ogni prodotto da aggiungere o rimuovere genera un comando nel formato "aggiungi [prodotto] alla lista [online|supermercato]" o "rimuovi [prodotto] dalla lista [online|supermercato]". ' +
+              'Se l\'utente comunica di aver comprato dei prodotti rispondi con "ho comprato [prodotti]". ' +
+              'Rispondi solo con i comandi, uno per riga, senza testo extra.'
           },
           {
             role: 'user',
